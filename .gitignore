@@ -2,6 +2,7 @@ target/
 *.class
 *.jar
 *.log
+*.db
 dependency-reduced-pom.xml
 .idea/
 *.iml
