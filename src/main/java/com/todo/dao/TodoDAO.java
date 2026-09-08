@@ -5,8 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,18 +19,20 @@ public class TodoDAO {
     private static final String UPDATE_TODO = "UPDATE todos SET title=?, description=?, completed=?, updated_at=? WHERE id=?";
     private static final String DELETE_TODO = "DELETE FROM todos WHERE id=?";
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
     public TodoDAO() {
         createTableIfNotExists();
     }
 
     private void createTableIfNotExists() {
         String createTableSQL = "CREATE TABLE IF NOT EXISTS todos (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY, " +
-                "title VARCHAR(255) NOT NULL, " +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "title TEXT NOT NULL, " +
                 "description TEXT, " +
-                "completed BOOLEAN DEFAULT FALSE, " +
-                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)";
+                "completed INTEGER DEFAULT 0, " +
+                "created_at TEXT, " +
+                "updated_at TEXT)";
         try (Connection conn = DatabaseConnection.getDBConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(createTableSQL);
@@ -51,14 +53,22 @@ public class TodoDAO {
                 todo.setDescription(rs.getString("description"));
                 todo.setCompleted(rs.getBoolean("completed"));
                 
-                Timestamp createdAtTs = rs.getTimestamp("created_at");
-                if (createdAtTs != null) {
-                    todo.setCreated_at(createdAtTs.toLocalDateTime());
+                String createdAtStr = rs.getString("created_at");
+                if (createdAtStr != null && !createdAtStr.isEmpty()) {
+                    try {
+                        todo.setCreated_at(LocalDateTime.parse(createdAtStr));
+                    } catch (Exception e) {
+                        todo.setCreated_at(LocalDateTime.now());
+                    }
                 }
                 
-                Timestamp updatedAtTs = rs.getTimestamp("updated_at");
-                if (updatedAtTs != null) {
-                    todo.setUpdated_at(updatedAtTs.toLocalDateTime());
+                String updatedAtStr = rs.getString("updated_at");
+                if (updatedAtStr != null && !updatedAtStr.isEmpty()) {
+                    try {
+                        todo.setUpdated_at(LocalDateTime.parse(updatedAtStr));
+                    } catch (Exception e) {
+                        todo.setUpdated_at(LocalDateTime.now());
+                    }
                 }
 
                 todos.add(todo);
@@ -79,8 +89,8 @@ public class TodoDAO {
             stmt.setString(1, title);
             stmt.setString(2, description);
             stmt.setBoolean(3, completed);
-            stmt.setTimestamp(4, Timestamp.valueOf(created_at));
-            stmt.setTimestamp(5, Timestamp.valueOf(updated_at));
+            stmt.setString(4, created_at.format(DATE_FORMATTER));
+            stmt.setString(5, updated_at.format(DATE_FORMATTER));
 
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected == 0) {
@@ -109,7 +119,7 @@ public class TodoDAO {
             stmt.setString(1, title);
             stmt.setString(2, description);
             stmt.setBoolean(3, completed);
-            stmt.setTimestamp(4, Timestamp.valueOf(updated_At));
+            stmt.setString(4, updated_At.format(DATE_FORMATTER));
             stmt.setInt(5, id);
 
             int rowsAffected = stmt.executeUpdate();
